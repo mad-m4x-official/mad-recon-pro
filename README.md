@@ -44,14 +44,38 @@ git clone https://github.com/mad-m4x-official/mad-recon
 cd mad-recon
 python3 mad-recon-pro.py
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 File | Description
 mad-recon-pro.py | Main installer script
 tools.py | All categorized tools and their install commands
 README.md | Documentation file you're reading right now
 
+
+
+
+
 🧑‍💻 Author
 GitHub: mad-m4x-official
 Feel free to open an issue or submit a pull request for suggestions or fixes.
+
+
 
 ⚠️ Disclaimer
 This toolkit is intended for educational and authorized penetration testing purposes only.
