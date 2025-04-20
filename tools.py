@@ -1,3 +1,5 @@
+# tools.py
+
 TOOLS = {
     "🕵️‍♂️ Subdomain Enumeration": [
         ("Sublist3r", "git clone https://github.com/aboul3la/Sublist3r.git"),
