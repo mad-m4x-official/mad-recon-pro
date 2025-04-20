@@ -55,7 +55,7 @@ TOOLS = {
         ("whatweb", "git clone https://github.com/urbanadventurer/WhatWeb.git"),
         ("CMSeeK", "git clone https://github.com/Tuhinshubhra/CMSeeK.git")
     ],
-    "🧪 Fuzzing & Testing": [
+    "🧲 Fuzzing & Testing": [
         ("wfuzz", "pip install wfuzz"),
         ("fuff", "go install github.com/ffuf/ffuf@latest"),
         ("boofuzz", "pip install boofuzz"),
