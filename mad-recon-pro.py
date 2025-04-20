@@ -9,48 +9,47 @@ from datetime import datetime
 from termcolor import cprint, colored
 from difflib import get_close_matches
 from flask import Flask, render_template_string, request, redirect, url_for
+from tools import TOOLS
 
-# ==== CONFIG START ====
-BANNER = r"""
- __  __         _ ____                       ____  ____   ___  
-|  \/  |___ _ _| |  _ \__ _ _______ _ _ ___ |  _ \|  _ \ / _ \ 
-| |\/| / -_) '_| | |_) \ V / _ \ \ / '_/ -_)| | | | |_) | (_) |
-|_|  |_\___|_| |_|____/\_/\___/_\_\_| \___||_| |_| .__/ \___/ 
-                                               |_|            
-                    MAD RECON PRO
-"""
+def print_banner():
+    banner = r'''
+\033[1;31m
+      ▄█░ ▄▄▄       ███▄ ▄███▓ ▄▄▄      ▓█████  ▄████▄   ▒█████   ██▀███  
+     ░█░ ▒████▄    ▓██▒▀█▀ ██▒▒████▄    ▓█   ▀ ▒██▀ ▀█  ▒██▒  ██▒▓██ ▒ ██▒
+  ▄▄ ░█░ ▒██  ▀█▄  ▓██    ▓██░▒██  ▀█▄  ▒███   ▒▓█    ▄ ▒██░  ██▒▓██ ░▄█ ▒
+ ▒▒ ░█░ ░██▄▄▄▄██ ▒██    ▒██ ░██▄▄▄▄██ ▒▓█  ▄ ▒▓▓▄ ▄██▒▒██   ██░▒██▀▀█▄  
+ ░░ ░█░  ▓█   ▓██▒▒██▒   ░██▒ ▓█   ▓██▒░▒████▒▒ ▓███▀ ░░ ████▓▒░░██▓ ▒██▒
+     ░   ▒▒   ▓▒█░░ ▒░   ░  ░ ▒▒   ▓▒█░░░ ▒░ ░░ ░▒ ▒  ░░ ▒░▒░▒░ ░ ▒▓ ░▒▓░
+           ▒   ▒▒ ░░  ░      ░  ▒   ▒▒ ░ ░ ░  ░  ░  ▒     ░ ▒ ▒░   ░▒ ░ ▒░
+           ░   ▒   ░      ░     ░   ▒      ░   ░        ░ ░ ░ ▒    ░░   ░ 
+               ░  ░       ░         ░  ░   ░  ░░ ░          ░ ░     ░     
+
+               \033[1;32m MAD RECON PRO \033[1;36m| BUG BOUNTY TOOLKIT
+                   \033[1;34mBy: mad-m4x-official | v1.0
+              \033[0m
+'''
+    print(banner)
 
 TOOLS_JSON = "install_report.json"
 BASE_DIR = os.path.expanduser("~/.mad-recon-pro")
 TOOLS_DIR = os.path.join(BASE_DIR, "tools")
-CATEGORIES = {
-    "recon": ["subfinder", "amass", "assetfinder"],
-    "xss": ["kxss", "dalfox"],
-    "sqli": ["sqlmap"],
-}
-
 COLOR_MAP = {"installing": "blue", "success": "green", "error": "red"}
 # ==== CONFIG END ====
 
 app = Flask(__name__)
 
-
 def print_banner():
     cprint(BANNER, "cyan")
-
 
 def color_print(text, status):
     cprint(text, COLOR_MAP.get(status, "white"))
 
-
 def run_cmd(cmd):
     try:
-        result = subprocess.run(cmd, shell=True, check=True,
-                                stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        result = subprocess.run(cmd, shell=True, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         return result.stdout.decode().strip()
     except subprocess.CalledProcessError:
         return None
-
 
 def ensure_path():
     if TOOLS_DIR not in os.environ.get("PATH", ""):
@@ -60,7 +59,6 @@ def ensure_path():
         os.environ["PATH"] += os.pathsep + TOOLS_DIR
         color_print("[+] PATH updated. Run 'source ~/.bashrc' to apply.", "success")
 
-
 def create_symlink(tool_path, name):
     link_path = os.path.join(TOOLS_DIR, name)
     if not os.path.exists(TOOLS_DIR):
@@ -69,16 +67,13 @@ def create_symlink(tool_path, name):
         os.remove(link_path)
     os.symlink(tool_path, link_path)
 
-
 def tool_health_check(name):
     return shutil.which(name) is not None
 
-
 def get_suggestion(name):
-    all_tools = [tool for tools in CATEGORIES.values() for tool in tools]
+    all_tools = list(TOOLS.keys())
     match = get_close_matches(name, all_tools, n=1)
     return match[0] if match else None
-
 
 def version_check(tool, cmd="--version"):
     path = shutil.which(tool)
@@ -90,53 +85,28 @@ def version_check(tool, cmd="--version"):
             return "unknown"
     return "not installed"
 
-
 def install_tool(name):
     color_print(f"[*] Installing {name}...", "installing")
     success = False
-    if name == "subfinder":
-        run_cmd("go install github.com/projectdiscovery/subfinder/v2/cmd/subfinder@latest")
-        bin_path = os.path.expanduser("~/go/bin/subfinder")
-        if os.path.exists(bin_path):
-            create_symlink(bin_path, "subfinder")
-            fix_subfinder_config()
-            success = True
-    elif name == "amass":
-        run_cmd("go install github.com/owasp-amass/amass/v4/...@latest")
-        bin_path = os.path.expanduser("~/go/bin/amass")
-        if os.path.exists(bin_path):
-            create_symlink(bin_path, "amass")
-            success = True
-    elif name == "sqlmap":
-        repo = os.path.join(BASE_DIR, "sqlmap")
-        if not os.path.exists(repo):
-            run_cmd(f"git clone https://github.com/sqlmapproject/sqlmap {repo}")
-        create_symlink(os.path.join(repo, "sqlmap.py"), "sqlmap")
-        success = True
-    else:
-        color_print(f"[-] No installer defined for {name}.", "error")
+    try:
+        install_cmd = TOOLS.get(name)
+        if install_cmd:
+            run_cmd(install_cmd)
+            tool_path = shutil.which(name) or os.path.expanduser(f"~/go/bin/{name}")
+            if tool_path and os.path.exists(tool_path):
+                create_symlink(tool_path, name)
+                success = True
+        else:
+            color_print(f"[-] No installer defined for {name}.", "error")
+    except Exception as e:
+        color_print(f"[!] Error installing {name}: {e}", "error")
 
     color_print(f"[+] Installed {name}" if success else f"[!] Failed {name}", "success" if success else "error")
     return {"tool": name, "status": "success" if success else "error"}
 
-
-def fix_subfinder_config():
-    config_path = os.path.expanduser("~/.config/subfinder/config.yaml")
-    if os.path.exists(config_path):
-        with open(config_path, "r+") as f:
-            data = f.read()
-            if "shodan:" in data and "YOUR_API_KEY" in data:
-                data = data.replace("YOUR_API_KEY", "")
-                f.seek(0)
-                f.write(data)
-                f.truncate()
-        color_print("[+] Subfinder config fixed.", "success")
-
-
 def save_report(results):
     with open(TOOLS_JSON, "w") as f:
         json.dump(results, f, indent=2)
-
 
 def uninstall_tool(name):
     link_path = os.path.join(TOOLS_DIR, name)
@@ -146,11 +116,10 @@ def uninstall_tool(name):
     else:
         color_print(f"[-] {name} not found.", "error")
 
-
 @app.route("/", methods=["GET", "POST"])
 def dashboard():
-    installed = [tool for tools in CATEGORIES.values() for tool in tools if tool_health_check(tool)]
-    all_tools = [tool for tools in CATEGORIES.values() for tool in tools]
+    all_tools = list(TOOLS.keys())
+    installed = [tool for tool in all_tools if tool_health_check(tool)]
     if request.method == "POST":
         action = request.form.get("action")
         tool = request.form.get("tool")
@@ -159,7 +128,6 @@ def dashboard():
         elif action == "uninstall":
             uninstall_tool(tool)
         return redirect(url_for("dashboard"))
-
     return render_template_string("""
         <h2>MAD RECON PRO Dashboard</h2>
         <form method="post">
@@ -177,10 +145,9 @@ def dashboard():
         </form>
     """, tools=all_tools, installed=installed)
 
-
 def main():
     parser = argparse.ArgumentParser(description="MAD RECON PRO")
-    parser.add_argument("--category", help="Install tools by category: recon, xss, sqli")
+    parser.add_argument("--category", help="Install tools by category (e.g., recon, xss)")
     parser.add_argument("--uninstall", help="Uninstall a specific tool")
     parser.add_argument("--health", action="store_true", help="Check health of all installed tools")
     parser.add_argument("--offline", action="store_true", help="Use offline mode if tools already downloaded")
@@ -201,7 +168,7 @@ def main():
 
     tools = []
     if args.category:
-        tools = CATEGORIES.get(args.category.lower(), [])
+        tools = [t for t in TOOLS if TOOLS[t].startswith(args.category)]
         if not tools:
             suggestion = get_suggestion(args.category.lower())
             if suggestion:
@@ -210,7 +177,7 @@ def main():
                 color_print("[!] Invalid category.", "error")
             return
     else:
-        tools = [tool for tools in CATEGORIES.values() for tool in tools]
+        tools = list(TOOLS.keys())
 
     for tool in tools:
         version = version_check(tool)
@@ -224,7 +191,6 @@ def main():
 
     save_report(results)
     color_print(f"[+] Installation completed. Report saved to {TOOLS_JSON}", "success")
-
 
 if __name__ == "__main__":
     main()
