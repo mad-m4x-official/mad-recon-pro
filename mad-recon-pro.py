@@ -11,8 +11,8 @@ from difflib import get_close_matches
 from flask import Flask, render_template_string, request, redirect, url_for
 from tools import TOOLS
 
-def print_banner():
-    banner = r'''
+# Add this at the top of your script, after the imports
+BANNER = r'''
 \033[1;31m
       ▄█░ ▄▄▄       ███▄ ▄███▓ ▄▄▄      ▓█████  ▄████▄   ▒█████   ██▀███  
      ░█░ ▒████▄    ▓██▒▀█▀ ██▒▒████▄    ▓█   ▀ ▒██▀ ▀█  ▒██▒  ██▒▓██ ▒ ██▒
@@ -28,7 +28,10 @@ def print_banner():
                    \033[1;34mBy: mad-m4x-official | v1.0
               \033[0m
 '''
-    print(banner)
+
+def print_banner():
+    cprint(BANNER, "cyan")
+
 
 TOOLS_JSON = "install_report.json"
 BASE_DIR = os.path.expanduser("~/.mad-recon-pro")
