@@ -94,11 +94,10 @@ def main():
     banner()
     os.makedirs(TOOLS_DIR, exist_ok=True)
     check_dependencies()
-    from tools import TOOLS  # tools.py has your categorized tool list
+    from tools import TOOLS
     for category, tools in TOOLS.items():
         print(f"\n===== {category} =====")
         for name, command in tools:
-            # Add --break-system-packages flag if pip is used
             if 'pip install' in command:
                 command += ' --break-system-packages'
             install_tool(name, command)
@@ -109,7 +108,7 @@ def main():
 
 # ---------- SIMPLE BANNER ----------
 def banner():
-    print(f"{GREEN}[ mad-recon-pro ] Installing tools...{RESET}")
+    print(f"{GREEN}mad-recon-pro | Automated Bug Bounty Installer 🚀{RESET}")
 
 if __name__ == "__main__":
     main()
