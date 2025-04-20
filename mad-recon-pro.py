@@ -1,198 +1,163 @@
-#!/usr/bin/env python3
 import os
-import platform
-import subprocess
 import sys
+import subprocess
+import json
+import argparse
 import shutil
+import platform
+from datetime import datetime
+from termcolor import cprint, colored
 
-# ---------- CONFIG ----------
-TOOLS_DIR = os.path.expanduser("~/tools")
-BIN_DIR = os.path.expanduser("~/.local/bin")
+# ==== CONFIG START ====
+BANNER = r"""
+ __  __         _ ____                       ____  ____   ___  
+|  \/  |___ _ _| |  _ \__ _ _______ _ _ ___ |  _ \|  _ \ / _ \ 
+| |\/| / -_) '_| | |_) \ V / _ \ \ / '_/ -_)| | | | |_) | (_) |
+|_|  |_\___|_| |_|____/\_/\___/_\_\_| \___||_| |_| .__/ \___/ 
+                                               |_|            
+                    MAD RECON PRO
+"""
 
-<<<<<<< HEAD
-# ---------- SYSTEM PATH ADD ----------
-def add_to_path():
-    shell_rc = os.path.expanduser("~/.bashrc") if os.environ.get("SHELL", "").endswith("bash") else os.path.expanduser("~/.zshrc")
-    export_line = f'\nexport PATH="$PATH:{BIN_DIR}"\n'
-    if export_line.strip() not in open(shell_rc).read():
-        with open(shell_rc, "a") as rc:
-            rc.write(export_line)
-    os.environ["PATH"] += f":{BIN_DIR}"
-    print(f"[+] PATH updated and added to {shell_rc}")
-
-# ---------- TOOL INSTALLER ----------
-def install_tool(name, command):
-    print(f"[+] Installing {name}...")
-    path = os.path.join(TOOLS_DIR, name)
-    if os.path.exists(path):
-        print(f"[-] {name} already exists. Updating...")
-        try:
-            subprocess.run(f"cd {path} && git pull", shell=True, check=True, executable="/bin/bash")
-        except subprocess.CalledProcessError:
-            print(f"[!] Update failed for {name}. Skipping...")
-=======
-# ---------- COLORS ----------
-RED = "\033[91m"
-GREEN = "\033[92m"
-YELLOW = "\033[93m"
-RESET = "\033[0m"
-
-# ---------- TOOL INSTALLER ----------
-def install_tool(name, command):
-    print(f"{YELLOW}[+] Installing {name}...{RESET}")
-    path = os.path.join(TOOLS_DIR, name)
-    if os.path.exists(path):
-        print(f"{YELLOW}[-] {name} already exists. Updating...{RESET}")
-        try:
-            subprocess.run(f"cd {path} && git pull", shell=True, check=True, executable="/bin/bash")
-        except subprocess.CalledProcessError:
-            print(f"{RED}[!] Update failed for {name}. Skipping...{RESET}")
->>>>>>> c366560b45d505a611a7ca17aa5f61cacbc6480c
-        return
-    os.chdir(TOOLS_DIR)
-    for attempt in range(2):
-        try:
-            subprocess.run(command, shell=True, check=True, executable="/bin/bash")
-            break
-        except subprocess.CalledProcessError as e:
-<<<<<<< HEAD
-            print(f"[!] Attempt {attempt+1} failed to install {name}: {e}")
-            if attempt == 1:
-                print(f"[!] Skipping {name} after 2 failed attempts.")
-=======
-            print(f"{RED}[!] Attempt {attempt+1} failed to install {name}: {e}{RESET}")
-            if attempt == 1:
-                print(f"{RED}[!] Skipping {name} after 2 failed attempts.{RESET}")
->>>>>>> c366560b45d505a611a7ca17aa5f61cacbc6480c
-
-# ---------- SYMLINK CREATION ----------
-def create_symlinks():
-    os.makedirs(BIN_DIR, exist_ok=True)
-    for root, _, files in os.walk(TOOLS_DIR):
-        for file in files:
-            full_path = os.path.join(root, file)
-            if os.access(full_path, os.X_OK) and not file.endswith(('.md', '.txt', '.pyc')):
-                symlink_path = os.path.join(BIN_DIR, file)
-                if not os.path.exists(symlink_path):
-                    try:
-                        os.symlink(full_path, symlink_path)
-                    except Exception:
-                        pass
-
-# ---------- DEPENDENCY CHECKERS ----------
-REQUIRED_PKG = {
-    "go": "sudo apt install -y golang",
-    "pip": "sudo apt install -y python3-pip",
-    "cargo": "sudo apt install -y cargo",
-    "gem": "sudo apt install -y ruby-full",
-<<<<<<< HEAD
-    "snap": "sudo apt install -y snapd",
-    "git": "sudo apt install -y git"
+TOOLS_JSON = "install_report.json"
+BASE_DIR = os.path.expanduser("~/.mad-recon-pro")
+TOOLS_DIR = os.path.join(BASE_DIR, "tools")
+CATEGORIES = {
+    "recon": ["subfinder", "amass", "assetfinder"],
+    "xss": ["kxss", "dalfox"],
+    "sqli": ["sqlmap"],
+    # Add more categories and tools as needed
 }
 
-TERMUX_PKG = {
-    "go": "pkg install -y golang",
-    "pip": "pkg install -y python3-pip",
-    "cargo": "pkg install -y rust",
-    "gem": "pkg install -y ruby",
-    "git": "pkg install -y git"
-}
+COLOR_MAP = {"installing": "blue", "success": "green", "error": "red"}
+# ==== CONFIG END ====
 
-WINDOWS_HINT = "Please install dependencies manually via Chocolatey or Winget."
+def print_banner():
+    cprint(BANNER, "cyan")
 
-def check_dependencies():
-    print("[+] Checking dependencies...")
-    termux = shutil.which("pkg")
-    is_windows = platform.system() == "Windows"
-    for binary in REQUIRED_PKG:
-        if shutil.which(binary) is None:
-            print(f"[!] Missing dependency: {binary}.")
-            if termux:
-                subprocess.run(TERMUX_PKG[binary], shell=True)
-            elif is_windows:
-                print(f"[!] {binary} missing on Windows. {WINDOWS_HINT}")
-=======
-    "git": "sudo apt install -y git"
-}
+def color_print(text, status):
+    cprint(text, COLOR_MAP.get(status, "white"))
 
-WINDOWS_HINT = "Please install dependencies manually via Chocolatey or Winget."
+def run_cmd(cmd):
+    try:
+        result = subprocess.run(cmd, shell=True, check=True,
+                                stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        return result.stdout.decode().strip()
+    except subprocess.CalledProcessError as e:
+        return None
 
-def check_dependencies():
-    print(f"{YELLOW}[+] Checking dependencies...{RESET}")
-    is_windows = platform.system() == "Windows"
-    for binary in REQUIRED_PKG:
-        if shutil.which(binary) is None:
-            print(f"{RED}[!] Missing dependency: {binary}.{RESET}")
-            if is_windows:
-                print(f"{RED}[!] {binary} missing on Windows. {WINDOWS_HINT}{RESET}")
->>>>>>> c366560b45d505a611a7ca17aa5f61cacbc6480c
-            else:
-                subprocess.run(REQUIRED_PKG[binary], shell=True)
+def ensure_path():
+    if TOOLS_DIR not in os.environ.get("PATH", ""):
+        bashrc = os.path.expanduser("~/.bashrc")
+        with open(bashrc, "a") as f:
+            f.write(f"\nexport PATH=\"$PATH:{TOOLS_DIR}\"\n")
+        os.environ["PATH"] += os.pathsep + TOOLS_DIR
+        color_print("[+] PATH updated. Run 'source ~/.bashrc' to apply.", "success")
 
-# ---------- TOOL TEST ----------
-def verify_installation(tool):
-    if shutil.which(tool):
-<<<<<<< HEAD
-        print(f"[✔] {tool} installed successfully!")
+def create_symlink(tool_path, name):
+    link_path = os.path.join(TOOLS_DIR, name)
+    if not os.path.exists(TOOLS_DIR):
+        os.makedirs(TOOLS_DIR)
+    if os.path.exists(link_path):
+        os.remove(link_path)
+    os.symlink(tool_path, link_path)
+
+
+def tool_health_check(name):
+    return shutil.which(name) is not None
+
+def install_tool(name):
+    color_print(f"[*] Installing {name}...", "installing")
+    success = False
+    if name == "subfinder":
+        run_cmd("go install github.com/projectdiscovery/subfinder/v2/cmd/subfinder@latest")
+        bin_path = os.path.expanduser("~/go/bin/subfinder")
+        if os.path.exists(bin_path):
+            create_symlink(bin_path, "subfinder")
+            fix_subfinder_config()
+            success = True
+    elif name == "amass":
+        run_cmd("go install github.com/owasp-amass/amass/v4/...@latest")
+        bin_path = os.path.expanduser("~/go/bin/amass")
+        if os.path.exists(bin_path):
+            create_symlink(bin_path, "amass")
+            success = True
+    elif name == "sqlmap":
+        repo = os.path.join(BASE_DIR, "sqlmap")
+        if not os.path.exists(repo):
+            run_cmd(f"git clone https://github.com/sqlmapproject/sqlmap {repo}")
+        create_symlink(os.path.join(repo, "sqlmap.py"), "sqlmap")
+        success = True
     else:
-        print(f"[✘] {tool} not found in PATH!")
-=======
-        print(f"{GREEN}[✔] {tool} installed successfully!{RESET}")
+        color_print(f"[-] No installer defined for {name}.", "error")
+
+    color_print(f"[+] Installed {name}" if success else f"[!] Failed {name}", "success" if success else "error")
+    return {"tool": name, "status": "success" if success else "error"}
+
+
+def fix_subfinder_config():
+    config_path = os.path.expanduser("~/.config/subfinder/config.yaml")
+    if os.path.exists(config_path):
+        with open(config_path, "r+") as f:
+            data = f.read()
+            if "shodan:" in data and "YOUR_API_KEY" in data:
+                data = data.replace("YOUR_API_KEY", "")
+                f.seek(0)
+                f.write(data)
+                f.truncate()
+        color_print("[+] Subfinder config fixed.", "success")
+
+
+def save_report(results):
+    with open(TOOLS_JSON, "w") as f:
+        json.dump(results, f, indent=2)
+
+
+def uninstall_tool(name):
+    link_path = os.path.join(TOOLS_DIR, name)
+    if os.path.exists(link_path):
+        os.remove(link_path)
+        color_print(f"[+] {name} uninstalled.", "success")
     else:
-        print(f"{RED}[✘] {tool} not found in PATH!{RESET}")
+        color_print(f"[-] {name} not found.", "error")
 
-# ---------- PATH FIX ----------
-def add_to_path():
-    shell_rc = os.path.expanduser("~/.bashrc") if os.environ.get("SHELL", "").endswith("bash") else os.path.expanduser("~/.zshrc")
-    export_line = f'\nexport PATH="$PATH:{BIN_DIR}"\n'
-    if export_line.strip() not in open(shell_rc).read():
-        with open(shell_rc, "a") as rc:
-            rc.write(export_line)
-    os.environ["PATH"] += f":{BIN_DIR}"
-    print(f"{YELLOW}[+] PATH updated and added to {shell_rc}{RESET}")
->>>>>>> c366560b45d505a611a7ca17aa5f61cacbc6480c
 
-# ---------- MAIN ----------
 def main():
-    banner()
-    os.makedirs(TOOLS_DIR, exist_ok=True)
-    check_dependencies()
-<<<<<<< HEAD
-    from tools import TOOLS  # tools.py has your categorized tool list
-    for category, tools in TOOLS.items():
-        print(f"\n===== {category} =====")
-        for name, command in tools:
-=======
-    from tools import TOOLS
-    for category, tools in TOOLS.items():
-        print(f"\n===== {category} =====")
-        for name, command in tools:
-            if 'pip install' in command:
-                command += ' --break-system-packages'
->>>>>>> c366560b45d505a611a7ca17aa5f61cacbc6480c
-            install_tool(name, command)
-            verify_installation(name)
-    create_symlinks()
-    add_to_path()
-<<<<<<< HEAD
-    print("\n✅ All tools installed successfully. You can now use them from anywhere in your terminal.")
+    parser = argparse.ArgumentParser(description="MAD RECON PRO")
+    parser.add_argument("--category", help="Install tools by category: recon, xss, sqli")
+    parser.add_argument("--uninstall", help="Uninstall a specific tool")
+    parser.add_argument("--health", action="store_true", help="Check health of all installed tools")
+    parser.add_argument("--offline", action="store_true", help="Use offline mode if tools already downloaded")
+    args = parser.parse_args()
 
-# ---------- BANNER ----------
-def banner():
-    print("""\033[91m
- __  __           _ ____                        ____  
-|  \/  | __ _ ___| |  _ \ ___  ___ ___  _ __   |  _ \ ___  ___ ___ 
-| |\/| |/ _` / __| | |_) / _ \/ __/ _ \| '_ \  | |_) / _ \/ __/ __|
-| |  | | (_| \__ \ |  __/  __/ (_| (_) | | | | |  _ <  __/\__ \__ \
-|_|  |_|\__,_|___/_|_|   \___|\___\___/|_| |_| |_| \_\___||___/___/
-\033[0m""")
-=======
-    print(f"\n{GREEN}✅ All tools installed. Open a new terminal to use them.{RESET}")
+    print_banner()
+    ensure_path()
 
-# ---------- SIMPLE BANNER ----------
-def banner():
-    print(f"{GREEN}mad-recon-pro | Automated Bug Bounty Installer 🚀{RESET}")
->>>>>>> c366560b45d505a611a7ca17aa5f61cacbc6480c
+    results = []
+
+    if args.uninstall:
+        uninstall_tool(args.uninstall)
+        return
+
+    tools = []
+    if args.category:
+        tools = CATEGORIES.get(args.category.lower(), [])
+        if not tools:
+            color_print("[!] Invalid category.", "error")
+            return
+    else:
+        tools = [tool for tools in CATEGORIES.values() for tool in tools]
+
+    for tool in tools:
+        results.append(install_tool(tool))
+
+    if args.health:
+        for tool in tools:
+            ok = tool_health_check(tool)
+            color_print(f"[*] {tool}: {'OK' if ok else 'NOT FOUND'}", "success" if ok else "error")
+
+    save_report(results)
+    color_print(f"[+] Installation completed. Report saved to {TOOLS_JSON}", "success")
+
 
 if __name__ == "__main__":
     main()
