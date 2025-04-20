@@ -7,6 +7,8 @@ import shutil
 import platform
 from datetime import datetime
 from termcolor import cprint, colored
+from difflib import get_close_matches
+from flask import Flask, render_template_string, request, redirect, url_for
 
 # ==== CONFIG START ====
 BANNER = r"""
@@ -25,25 +27,30 @@ CATEGORIES = {
     "recon": ["subfinder", "amass", "assetfinder"],
     "xss": ["kxss", "dalfox"],
     "sqli": ["sqlmap"],
-    # Add more categories and tools as needed
 }
 
 COLOR_MAP = {"installing": "blue", "success": "green", "error": "red"}
 # ==== CONFIG END ====
 
+app = Flask(__name__)
+
+
 def print_banner():
     cprint(BANNER, "cyan")
 
+
 def color_print(text, status):
     cprint(text, COLOR_MAP.get(status, "white"))
+
 
 def run_cmd(cmd):
     try:
         result = subprocess.run(cmd, shell=True, check=True,
                                 stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         return result.stdout.decode().strip()
-    except subprocess.CalledProcessError as e:
+    except subprocess.CalledProcessError:
         return None
+
 
 def ensure_path():
     if TOOLS_DIR not in os.environ.get("PATH", ""):
@@ -52,6 +59,7 @@ def ensure_path():
             f.write(f"\nexport PATH=\"$PATH:{TOOLS_DIR}\"\n")
         os.environ["PATH"] += os.pathsep + TOOLS_DIR
         color_print("[+] PATH updated. Run 'source ~/.bashrc' to apply.", "success")
+
 
 def create_symlink(tool_path, name):
     link_path = os.path.join(TOOLS_DIR, name)
@@ -64,6 +72,24 @@ def create_symlink(tool_path, name):
 
 def tool_health_check(name):
     return shutil.which(name) is not None
+
+
+def get_suggestion(name):
+    all_tools = [tool for tools in CATEGORIES.values() for tool in tools]
+    match = get_close_matches(name, all_tools, n=1)
+    return match[0] if match else None
+
+
+def version_check(tool, cmd="--version"):
+    path = shutil.which(tool)
+    if path:
+        try:
+            output = subprocess.check_output([tool, cmd], stderr=subprocess.STDOUT).decode()
+            return output.strip()
+        except:
+            return "unknown"
+    return "not installed"
+
 
 def install_tool(name):
     color_print(f"[*] Installing {name}...", "installing")
@@ -121,17 +147,52 @@ def uninstall_tool(name):
         color_print(f"[-] {name} not found.", "error")
 
 
+@app.route("/", methods=["GET", "POST"])
+def dashboard():
+    installed = [tool for tools in CATEGORIES.values() for tool in tools if tool_health_check(tool)]
+    all_tools = [tool for tools in CATEGORIES.values() for tool in tools]
+    if request.method == "POST":
+        action = request.form.get("action")
+        tool = request.form.get("tool")
+        if action == "install":
+            install_tool(tool)
+        elif action == "uninstall":
+            uninstall_tool(tool)
+        return redirect(url_for("dashboard"))
+
+    return render_template_string("""
+        <h2>MAD RECON PRO Dashboard</h2>
+        <form method="post">
+        {% for tool in tools %}
+            <div>
+                <b>{{ tool }}</b>
+                {% if tool in installed %}
+                    <button name="action" value="uninstall">Uninstall</button>
+                {% else %}
+                    <button name="action" value="install">Install</button>
+                {% endif %}
+                <input type="hidden" name="tool" value="{{ tool }}">
+            </div>
+        {% endfor %}
+        </form>
+    """, tools=all_tools, installed=installed)
+
+
 def main():
     parser = argparse.ArgumentParser(description="MAD RECON PRO")
     parser.add_argument("--category", help="Install tools by category: recon, xss, sqli")
     parser.add_argument("--uninstall", help="Uninstall a specific tool")
     parser.add_argument("--health", action="store_true", help="Check health of all installed tools")
     parser.add_argument("--offline", action="store_true", help="Use offline mode if tools already downloaded")
+    parser.add_argument("--web", action="store_true", help="Run Web Dashboard")
     args = parser.parse_args()
+
+    if args.web:
+        app.run(debug=True)
+        return
 
     print_banner()
     ensure_path()
-
     results = []
 
     if args.uninstall:
@@ -142,12 +203,18 @@ def main():
     if args.category:
         tools = CATEGORIES.get(args.category.lower(), [])
         if not tools:
-            color_print("[!] Invalid category.", "error")
+            suggestion = get_suggestion(args.category.lower())
+            if suggestion:
+                color_print(f"[!] Invalid category. Did you mean: {suggestion}?", "error")
+            else:
+                color_print("[!] Invalid category.", "error")
             return
     else:
         tools = [tool for tools in CATEGORIES.values() for tool in tools]
 
     for tool in tools:
+        version = version_check(tool)
+        color_print(f"[*] {tool} version: {version}", "installing")
         results.append(install_tool(tool))
 
     if args.health:
