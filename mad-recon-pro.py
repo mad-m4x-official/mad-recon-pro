@@ -11,7 +11,7 @@ from difflib import get_close_matches
 from flask import Flask, render_template_string, request, redirect, url_for
 from tools import TOOLS
 
-# Add this at the top of your script, after the imports
+# === BANNER ===
 BANNER = r'''
 \033[1;31m
       ▄█░ ▄▄▄       ███▄ ▄███▓ ▄▄▄      ▓█████  ▄████▄   ▒█████   ██▀███  
@@ -32,17 +32,12 @@ BANNER = r'''
 def print_banner():
     cprint(BANNER, "cyan")
 
-
 TOOLS_JSON = "install_report.json"
 BASE_DIR = os.path.expanduser("~/.mad-recon-pro")
 TOOLS_DIR = os.path.join(BASE_DIR, "tools")
 COLOR_MAP = {"installing": "blue", "success": "green", "error": "red"}
-# ==== CONFIG END ====
 
 app = Flask(__name__)
-
-def print_banner():
-    cprint(BANNER, "cyan")
 
 def color_print(text, status):
     cprint(text, COLOR_MAP.get(status, "white"))
