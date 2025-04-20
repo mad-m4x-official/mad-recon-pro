@@ -40,9 +40,11 @@
 ## 🚀 Usage
 
 ```bash
-git clone https://github.com/mad-m4x-official/mad-recon
-cd mad-recon
-python3 mad-recon-pro.py
+git clone https://github.com/mad-m4x-official/mad-recon-pro.git
+cd mad-recon-pro
+chmod +x mad-recon-pro.py
+./mad-recon-pro.py
+
 
 
 
