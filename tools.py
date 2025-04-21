@@ -1,5 +1,3 @@
-# tools.py
-
 TOOLS = {
     "🕵️‍♂️ Subdomain Enumeration": [
         "Sublist3r", "git clone https://github.com/aboul3la/Sublist3r.git",
@@ -20,7 +18,7 @@ TOOLS = {
         "shodan", "pip install -U shodan",
         "censys", "pip install censys",
         "spiderfoot", "git clone https://github.com/smicallef/spiderfoot.git",
-        "FOCA", "echo 'Manual tool, Windows only'"),
+        "FOCA", "echo 'Manual tool, Windows only'",
         "DorkSearch", "git clone https://github.com/techgaun/github-dorks.git",
         "GitHarvester", "git clone https://github.com/UnkL4b/GitHarvester.git"
     ],
@@ -72,8 +70,8 @@ TOOLS = {
         "katana", "go install github.com/projectdiscovery/katana/cmd/katana@latest"
     ],
     "🗄️ Wordlists": [
-        ("SecLists", "git clone https://github.com/danielmiessler/SecLists.git"),
-        ("PayloadsAllTheThings", "git clone https://github.com/swisskyrepo/PayloadsAllTheThings.git"
+        "SecLists", "git clone https://github.com/danielmiessler/SecLists.git",
+        "PayloadsAllTheThings", "git clone https://github.com/swisskyrepo/PayloadsAllTheThings.git"
     ],
     "🔐 Secrets & Git Leaks": [
         "gitleaks", "go install github.com/gitleaks/gitleaks/v8@latest",
@@ -85,7 +83,7 @@ TOOLS = {
     "🎯 Port Scanning / Network": [
         "nmap", "sudo apt install -y nmap",
         "masscan", "git clone https://github.com/robertdavidgraham/masscan.git && cd masscan && make",
-        "rustscan", "cargo install rustscan"),
+        "rustscan", "cargo install rustscan",
         "naabu", "go install -v github.com/projectdiscovery/naabu/v2/cmd/naabu@latest"
     ],
     "🔭 Visual Recon": [
